@@ -1,15 +1,21 @@
 ﻿#include "framework.h"
 #include "resource.h"
-#include "Engine.h"
+#include "engine.h"
+#include "render_os.h"
 
 #define MAX_LOADSTRING 100
 
-HINSTANCE g_hInst;                                
+#define WIDTH 160
+#define HEIGHT 100
+
+HINSTANCE g_hInst;    
+HWND g_hWnd;
 LPCWSTR windowClassName = L"SkiesConsoleWndClass";            
 
 BOOL createWindow(int);
 ATOM registerClass();
 BOOL initInstance(int nCmdShow);
+BOOL processMessages();
 LRESULT CALLBACK wndProc(HWND, UINT, WPARAM, LPARAM);
 
 int APIENTRY wWinMain(HINSTANCE hInstance,
@@ -26,28 +32,24 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
 		return FALSE;
 	}
 
+	if (!(renderInit(g_hWnd, WIDTH, HEIGHT))) {
+		return FALSE;
+	}
+
 	if (!gameInit()) {
 		return FALSE;
 	}
 
-	MSG msg;
 	BOOL cont = TRUE;
-	while (cont) {
+	while (processMessages()) {
 		gameStep();
-		while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
-			if (msg.message == WM_QUIT) {
-				cont = FALSE;
-			}
-			else {
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			}		
-		}
+		render();
 	}
 
 	gameClean();
+	renderClean();
 
-	return (int)msg.wParam;
+	return 0;
 }
 
 BOOL createWindow(int nCmdShow) {
@@ -84,17 +86,34 @@ BOOL initInstance(int nCmdShow)
 	WCHAR szTitle[MAX_LOADSTRING];
 	LoadStringW(g_hInst, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 
-	HWND hWnd = CreateWindowW(windowClassName, szTitle, WS_OVERLAPPEDWINDOW,
+	g_hWnd = CreateWindowW(windowClassName, szTitle, WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, g_hInst, nullptr);
 
-	if (!hWnd) {
+	if (!g_hWnd) {
 		return FALSE;
 	}
 
-	ShowWindow(hWnd, nCmdShow);
-	UpdateWindow(hWnd);
+	ShowWindow(g_hWnd, nCmdShow);
+	UpdateWindow(g_hWnd);
 
    return TRUE;
+}
+
+
+BOOL processMessages() {
+	MSG msg;
+
+	while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
+		if (msg.message == WM_QUIT) {
+			return FALSE;
+		}
+		else {
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+	}
+
+	return TRUE;
 }
 
 LRESULT CALLBACK wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -104,7 +123,6 @@ LRESULT CALLBACK wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			PAINTSTRUCT ps;
 			HDC hdc = BeginPaint(hWnd, &ps);
-			TextOutW(hdc, 10, 10, L"Hello, skies!", 13);
 			EndPaint(hWnd, &ps);
 		}
 		break;

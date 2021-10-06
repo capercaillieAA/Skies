@@ -139,14 +139,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Engine.h" />
+    <ClInclude Include="engine.h" />
     <ClInclude Include="framework.h" />
-    <ClInclude Include="Resource.h" />
+    <ClInclude Include="render.h" />
+    <ClInclude Include="render_os.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="targetver.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="Driver.cpp" />
-    <ClCompile Include="Engine.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Skies.rc" />
@@ -154,6 +152,11 @@
   <ItemGroup>
     <Image Include="Skies.ico" />
     <Image Include="small.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="driver.cpp" />
+    <ClCompile Include="engine.cpp" />
+    <ClCompile Include="render.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
