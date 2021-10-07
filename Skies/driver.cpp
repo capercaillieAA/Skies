@@ -5,8 +5,8 @@
 
 #define MAX_LOADSTRING 100
 
-#define WIDTH 160
-#define HEIGHT 100
+#define WIDTH 50
+#define HEIGHT 50
 
 HINSTANCE g_hInst;    
 HWND g_hWnd;
@@ -42,6 +42,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
 
 	BOOL cont = TRUE;
 	while (processMessages()) {
+		/*if (!IsIconic(g_hWnd)) {
+			Sleep(0);
+		}*/
 		gameStep();
 		render();
 	}
@@ -86,8 +89,11 @@ BOOL initInstance(int nCmdShow)
 	WCHAR szTitle[MAX_LOADSTRING];
 	LoadStringW(g_hInst, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 
+	DWORD style = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+	RECT rect = { 0, 0, WIDTH * FONT_WIDTH, HEIGHT * FONT_HEIGHT };
+	AdjustWindowRect(&rect, style, FALSE);
 	g_hWnd = CreateWindowW(windowClassName, szTitle, WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, g_hInst, nullptr);
+		CW_USEDEFAULT, 0, rect.right - rect.left, rect.bottom - rect.top, nullptr, nullptr, g_hInst, nullptr);
 
 	if (!g_hWnd) {
 		return FALSE;
@@ -119,18 +125,22 @@ BOOL processMessages() {
 LRESULT CALLBACK wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message) {
-	case WM_PAINT:
-		{
-			PAINTSTRUCT ps;
-			HDC hdc = BeginPaint(hWnd, &ps);
-			EndPaint(hWnd, &ps);
-		}
-		break;
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		break;
-	default:
-		return DefWindowProc(hWnd, message, wParam, lParam);
+		/*
+		case WM_PAINT:
+			{
+				PAINTSTRUCT ps;
+				HDC hdc = BeginPaint(hWnd, &ps);
+				EndPaint(hWnd, &ps);
+			}
+			break;
+		*/
+		case WM_ERASEBKGND:
+			break;
+		case WM_DESTROY:
+			PostQuitMessage(0);
+			break;
+		default:
+			return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 	return 0;
 }

@@ -15,11 +15,13 @@ struct RenderContext {
 
 	int width;
 	int height;
+	Gdiplus::Image *pFontText;
 	Symbol *screenBuffer;
 };
 
 static RenderContext* pCurrentCtx = nullptr;
 
+static LPCWSTR fontFileName = L".\\assets\\terminal8x8.png";
 
 int putCh(int x, int y, char ch, color_t fg, color_t bg) {
 	assert(pCurrentCtx != nullptr);
@@ -39,22 +41,38 @@ int putStr(int x, int y, const char* ch, color_t fg, color_t bg) {
 }
 
 bool renderInit(HWND hWnd, int width, int height) {
+	ULONG gdiToken;
+	Gdiplus::GdiplusStartupInput startupInput;
+	if (Gdiplus::GdiplusStartup(&gdiToken, &startupInput, NULL) != Gdiplus::Status::Ok) {
+		return false;
+	}
+	
 	pCurrentCtx = new RenderContext;
 	pCurrentCtx->hWnd = hWnd;
+	pCurrentCtx->gdiToken = gdiToken;
 	pCurrentCtx->width = width;
 	pCurrentCtx->height = height;
 	pCurrentCtx->screenBuffer = new Symbol[width * height];
-
-	Gdiplus::GdiplusStartupInput startupInput;
-	Gdiplus::GdiplusStartup(&pCurrentCtx->gdiToken, &startupInput, NULL);
+	pCurrentCtx->pFontText = new Gdiplus::Image(fontFileName); //todo: check
 
 	return true;
 }
 
 void render() {
+	RECT rect;
+	GetClientRect(pCurrentCtx->hWnd, &rect);
+	Gdiplus::Bitmap memBitmap(rect.right, rect.bottom);
+	Gdiplus::Graphics gBitmap(&memBitmap);
+	
+	gBitmap.Clear(Gdiplus::Color::AliceBlue);
+	Gdiplus::RectF bounds(0, 0, float(pCurrentCtx->width * FONT_WIDTH), float(pCurrentCtx->height * FONT_HEIGHT));
+	gBitmap.DrawImage(pCurrentCtx->pFontText, bounds);
+	
 	HDC hdc = GetDC(pCurrentCtx->hWnd);
-	Gdiplus::Graphics graphics(hdc);
-	graphics.Clear(Gdiplus::Color::AliceBlue);
+	Gdiplus::Graphics gHdc(hdc);
+	gHdc.DrawImage(&memBitmap, 0, 0);
+	//BitBlt(hdc, 0, 0, rect.right, rect.bottom, gBitmap.GetHDC(), 0, 0, SRCCOPY);
+	gHdc.ReleaseHDC(hdc);
 }
 
 void renderClean() {
