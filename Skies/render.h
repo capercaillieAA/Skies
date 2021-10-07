@@ -1,4 +1,7 @@
 #pragma once
+#include <cstdint>
 
-int putCh(int x, int y, char ch, int fg, int bg);
-int putStr(int x, int y, const char *ch, int fg, int bg);
+typedef int8_t color_t;
+
+int putCh(int x, int y, char ch, color_t fg, color_t bg);
+int putStr(int x, int y, const char *ch, color_t fg, color_t bg);
