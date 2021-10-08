@@ -45,8 +45,10 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
 		if (IsIconic(g_hWnd)) {
 			WaitMessage();
 		}
-		gameStep();
-		render();
+		else {
+			gameStep();
+			render();
+		}
 	}
 
 	gameClean();

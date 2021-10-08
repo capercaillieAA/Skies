@@ -11,24 +11,22 @@ struct Symbol {
 
 struct RenderContext {
 	HWND hWnd;
-	ULONG_PTR gdiToken;
+	HBITMAP hOffscreenBuffer;
+	HFONT hFont;
 
 	int width;
 	int height;
-	Gdiplus::Image *pFontText;
 	Symbol *screenBuffer;
 };
 
 static RenderContext* pCurrentCtx = nullptr;
-
-static LPCWSTR fontFileName = L".\\assets\\terminal8x8.png";
 
 int putCh(int x, int y, char ch, color_t fg, color_t bg) {
 	assert(pCurrentCtx != nullptr);
 	assert(x >= 0 && x <= pCurrentCtx->width);
 	assert(y >= 0 && y <= pCurrentCtx->height);
 
-	Symbol* pSymb = &pCurrentCtx->screenBuffer[y * pCurrentCtx->width + x];
+	Symbol *pSymb = &pCurrentCtx->screenBuffer[y * pCurrentCtx->width + x];
 	pSymb->ch = ch;
 	pSymb->fg = fg;
 	pSymb->bg = bg;
@@ -41,49 +39,50 @@ int putStr(int x, int y, const char* ch, color_t fg, color_t bg) {
 }
 
 bool renderInit(HWND hWnd, int width, int height) {
-	ULONG gdiToken;
-	Gdiplus::GdiplusStartupInput startupInput;
-	if (Gdiplus::GdiplusStartup(&gdiToken, &startupInput, NULL) != Gdiplus::Status::Ok) {
-		return false;
-	}
-	
 	pCurrentCtx = new RenderContext;
+
 	pCurrentCtx->hWnd = hWnd;
-	pCurrentCtx->gdiToken = gdiToken;
+
+	HDC hDC = GetDC(pCurrentCtx->hWnd);
+	pCurrentCtx->hOffscreenBuffer = CreateCompatibleBitmap(hDC, width * FONT_WIDTH, height * FONT_HEIGHT);
+	ReleaseDC(pCurrentCtx->hWnd, hDC);
+	
+	pCurrentCtx->hFont = CreateFontW(-FONT_WIDTH, -FONT_HEIGHT, 0, 0, 0, 0, 0, 0, OEM_CHARSET, OUT_DEVICE_PRECIS,
+		CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH, L"Terminal");
+	
+	int bufferSIze = width * height;
 	pCurrentCtx->width = width;
 	pCurrentCtx->height = height;
-	pCurrentCtx->screenBuffer = new Symbol[width * height];
-	pCurrentCtx->pFontText = new Gdiplus::Image(fontFileName); //todo: check
+	pCurrentCtx->screenBuffer = new Symbol[bufferSIze];
+	for (int i = 0; i < bufferSIze; i++) {
+		pCurrentCtx->screenBuffer[i] = Symbol{};
+	}
 
 	return true;
+}
+
+void renderClean() {	
+	DeleteObject(pCurrentCtx->hFont);
+	DeleteObject(pCurrentCtx->hOffscreenBuffer);
+
+	delete[] pCurrentCtx->screenBuffer;
+	delete pCurrentCtx;
+
+	pCurrentCtx = nullptr;
 }
 
 void render() {
 	RECT rect;
 	GetClientRect(pCurrentCtx->hWnd, &rect);
 	
-	HDC hdc = GetDC(pCurrentCtx->hWnd);
-	HDC memHdc = CreateCompatibleDC(hdc);
-	HBITMAP memBitmap = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
-	SelectObject(memHdc, memBitmap);
-
-	Gdiplus::Graphics gHdc(memHdc);
-	Gdiplus::RectF bounds(0, 0, float(pCurrentCtx->width * FONT_WIDTH), float(pCurrentCtx->height * FONT_HEIGHT));
-
-	gHdc.Clear(Gdiplus::Color::AliceBlue);
-	gHdc.DrawImage(pCurrentCtx->pFontText, bounds);
-	BitBlt(hdc, 0, 0, rect.right, rect.bottom, memHdc, 0, 0, SRCCOPY);
+	HDC hDC = GetDC(pCurrentCtx->hWnd);
+	HDC hMemDC = CreateCompatibleDC(hDC);
+	HBITMAP hMemBitmap = (HBITMAP)SelectObject(hMemDC, pCurrentCtx->hOffscreenBuffer);
 	
-	ReleaseDC(pCurrentCtx->hWnd, hdc);
-	ReleaseDC(pCurrentCtx->hWnd, memHdc);
+	TextOutW(hMemDC, 0, 0, L"Hello, World!", 13);
 
-}
-
-void renderClean() {
-	Gdiplus::GdiplusShutdown(pCurrentCtx->gdiToken);
-
-	delete[] pCurrentCtx->screenBuffer;
-	delete pCurrentCtx;
-
-	pCurrentCtx = nullptr;
+	BitBlt(hDC, 0, 0, rect.right, rect.bottom, hMemDC, 0, 0, SRCCOPY);
+	SelectObject(hMemDC, hMemBitmap);
+	ReleaseDC(pCurrentCtx->hWnd, hMemDC);
+	ReleaseDC(pCurrentCtx->hWnd, hDC);
 }
