@@ -61,18 +61,22 @@ bool renderInit(HWND hWnd, int width, int height) {
 void render() {
 	RECT rect;
 	GetClientRect(pCurrentCtx->hWnd, &rect);
-	Gdiplus::Bitmap memBitmap(rect.right, rect.bottom);
-	Gdiplus::Graphics gBitmap(&memBitmap);
-	
-	gBitmap.Clear(Gdiplus::Color::AliceBlue);
-	Gdiplus::RectF bounds(0, 0, float(pCurrentCtx->width * FONT_WIDTH), float(pCurrentCtx->height * FONT_HEIGHT));
-	gBitmap.DrawImage(pCurrentCtx->pFontText, bounds);
 	
 	HDC hdc = GetDC(pCurrentCtx->hWnd);
-	Gdiplus::Graphics gHdc(hdc);
-	gHdc.DrawImage(&memBitmap, 0, 0);
-	//BitBlt(hdc, 0, 0, rect.right, rect.bottom, gBitmap.GetHDC(), 0, 0, SRCCOPY);
-	gHdc.ReleaseHDC(hdc);
+	HDC memHdc = CreateCompatibleDC(hdc);
+	HBITMAP memBitmap = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
+	SelectObject(memHdc, memBitmap);
+
+	Gdiplus::Graphics gHdc(memHdc);
+	Gdiplus::RectF bounds(0, 0, float(pCurrentCtx->width * FONT_WIDTH), float(pCurrentCtx->height * FONT_HEIGHT));
+
+	gHdc.Clear(Gdiplus::Color::AliceBlue);
+	gHdc.DrawImage(pCurrentCtx->pFontText, bounds);
+	BitBlt(hdc, 0, 0, rect.right, rect.bottom, memHdc, 0, 0, SRCCOPY);
+	
+	ReleaseDC(pCurrentCtx->hWnd, hdc);
+	ReleaseDC(pCurrentCtx->hWnd, memHdc);
+
 }
 
 void renderClean() {

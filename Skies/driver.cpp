@@ -42,9 +42,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
 
 	BOOL cont = TRUE;
 	while (processMessages()) {
-		/*if (!IsIconic(g_hWnd)) {
-			Sleep(0);
-		}*/
+		if (IsIconic(g_hWnd)) {
+			WaitMessage();
+		}
 		gameStep();
 		render();
 	}
