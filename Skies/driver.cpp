@@ -5,7 +5,7 @@
 
 #define MAX_LOADSTRING 100
 
-#define WIDTH 50
+#define WIDTH 100
 #define HEIGHT 50
 
 HINSTANCE g_hInst;    

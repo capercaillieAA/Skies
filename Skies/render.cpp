@@ -21,6 +21,27 @@ struct RenderContext {
 
 static RenderContext* pCurrentCtx = nullptr;
 
+#define NUM_OF_ELEMS(arr) (sizeof(arr) / sizeof(arr[0]))
+
+static const COLORREF terminalColors[] = {
+	RGB(1, 1, 1),
+	RGB(222, 56, 43),
+	RGB(57, 181, 74),
+	RGB(255, 199, 6),
+	RGB(0, 111, 84),
+	RGB(118, 38, 113),
+	RGB(44, 181, 233),
+	RGB(204, 204, 204),
+	RGB(128, 128, 128),
+	RGB(255, 0, 0),
+	RGB(0, 255, 0),
+	RGB(255, 255, 0),
+	RGB(0, 0, 255),
+	RGB(255, 0, 255),
+	RGB(0, 255, 255),
+	RGB(255, 255, 255)
+};
+
 int putCh(int x, int y, char ch, color_t fg, color_t bg) {
 	assert(pCurrentCtx != nullptr);
 	assert(x >= 0 && x <= pCurrentCtx->width);
@@ -47,15 +68,15 @@ bool renderInit(HWND hWnd, int width, int height) {
 	pCurrentCtx->hOffscreenBuffer = CreateCompatibleBitmap(hDC, width * FONT_WIDTH, height * FONT_HEIGHT);
 	ReleaseDC(pCurrentCtx->hWnd, hDC);
 	
-	pCurrentCtx->hFont = CreateFontW(-FONT_WIDTH, -FONT_HEIGHT, 0, 0, 0, 0, 0, 0, OEM_CHARSET, OUT_DEVICE_PRECIS,
+	pCurrentCtx->hFont = CreateFontW(FONT_WIDTH, FONT_HEIGHT, 0, 0, 0, 0, 0, 0, OEM_CHARSET, OUT_DEVICE_PRECIS,
 		CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH, L"Terminal");
 	
-	int bufferSIze = width * height;
+	int bufferSize = width * height;
 	pCurrentCtx->width = width;
 	pCurrentCtx->height = height;
-	pCurrentCtx->screenBuffer = new Symbol[bufferSIze];
-	for (int i = 0; i < bufferSIze; i++) {
-		pCurrentCtx->screenBuffer[i] = Symbol{};
+	pCurrentCtx->screenBuffer = new Symbol[bufferSize];
+	for (int i = 0; i < bufferSize; ++i) {
+		pCurrentCtx->screenBuffer[i] = Symbol{'M', COLOR_RED, COLOR_WHITE};
 	}
 
 	return true;
@@ -71,6 +92,24 @@ void renderClean() {
 	pCurrentCtx = nullptr;
 }
 
+static void renderScreen(HDC hdc) {
+	for (int i = 0; i < pCurrentCtx->width; ++i) {
+		for (int j = 0; j < pCurrentCtx->height; ++j) {
+			int pos = i * pCurrentCtx->height + j;
+			int fg = pCurrentCtx->screenBuffer[pos].fg;
+			int bg = pCurrentCtx->screenBuffer[pos].bg;
+			char symbol = pCurrentCtx->screenBuffer[pos].ch;
+
+			assert(fg >= 0 && fg < NUM_OF_ELEMS(terminalColors));
+			assert(bg >= 0 && bg < NUM_OF_ELEMS(terminalColors));
+
+			SetTextColor(hdc, terminalColors[fg]);
+			SetBkColor(hdc, terminalColors[bg]);
+			TextOutA(hdc, i * FONT_WIDTH, j * FONT_HEIGHT, &symbol, 1);
+		}
+	}
+}
+
 void render() {
 	RECT rect;
 	GetClientRect(pCurrentCtx->hWnd, &rect);
@@ -78,11 +117,17 @@ void render() {
 	HDC hDC = GetDC(pCurrentCtx->hWnd);
 	HDC hMemDC = CreateCompatibleDC(hDC);
 	HBITMAP hMemBitmap = (HBITMAP)SelectObject(hMemDC, pCurrentCtx->hOffscreenBuffer);
+	HFONT hMemFont = (HFONT)SelectObject(hMemDC, pCurrentCtx->hFont);
 	
-	TextOutW(hMemDC, 0, 0, L"Hello, World!", 13);
+	renderScreen(hMemDC);
+
+	TEXTMETRICW tm;
+	GetTextMetricsW(hMemDC, &tm);
 
 	BitBlt(hDC, 0, 0, rect.right, rect.bottom, hMemDC, 0, 0, SRCCOPY);
+
 	SelectObject(hMemDC, hMemBitmap);
+	SelectObject(hMemDC, hMemFont);
 	ReleaseDC(pCurrentCtx->hWnd, hMemDC);
 	ReleaseDC(pCurrentCtx->hWnd, hDC);
 }
