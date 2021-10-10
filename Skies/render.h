@@ -1,7 +1,7 @@
 #pragma once
-#include <cstdint>
+#include "framework.h"
 
-typedef enum {
+enum Color {
 	COLOR_BLACK = 0,
 	COLOR_RED,
 	COLOR_GREEN,
@@ -18,7 +18,9 @@ typedef enum {
 	COLOR_BRIGHT_MAGENTA,
 	COLOR_BRIGHT_CYAN,
 	COLOR_BRIGHT_WHITE
-} color_t;
+};
+
+typedef uint8_t color_t;
 
 int putCh(int x, int y, char ch, color_t fg, color_t bg);
 int putStr(int x, int y, const char *ch, color_t fg, color_t bg);

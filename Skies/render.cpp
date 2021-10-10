@@ -1,4 +1,4 @@
-#include <cassert>
+#include "framework.h"
 #include "render.h"
 #include "render_os.h"
 #include <gdiplus.h>
@@ -55,7 +55,20 @@ int putCh(int x, int y, char ch, color_t fg, color_t bg) {
 	return 0;
 }
 
-int putStr(int x, int y, const char* ch, color_t fg, color_t bg) {
+int putStr(int x, int y, const char* str, color_t fg, color_t bg) {
+	assert(pCurrentCtx != nullptr);
+	assert(x >= 0 && x <= pCurrentCtx->width);
+	assert(y >= 0 && y <= pCurrentCtx->height);
+	assert(str != nullptr);
+
+	Symbol* pSymb = &pCurrentCtx->screenBuffer[y * pCurrentCtx->width + x];
+	while (char ch = *(str++)) {
+		pSymb->ch = ch;
+		pSymb->fg = fg;
+		pSymb->bg = bg;
+		pSymb++;
+	}
+
 	return 0;
 }
 
@@ -76,7 +89,7 @@ bool renderInit(HWND hWnd, int width, int height) {
 	pCurrentCtx->height = height;
 	pCurrentCtx->screenBuffer = new Symbol[bufferSize];
 	for (int i = 0; i < bufferSize; ++i) {
-		pCurrentCtx->screenBuffer[i] = Symbol{'M', COLOR_RED, COLOR_WHITE};
+		pCurrentCtx->screenBuffer[i] = Symbol{' ', COLOR_RED, COLOR_WHITE};
 	}
 
 	return true;
@@ -92,10 +105,21 @@ void renderClean() {
 	pCurrentCtx = nullptr;
 }
 
+extern int g_fps;
+
+static void renderFps(HDC hdc) {
+	char buf[40] = { 0 };
+	snprintf(buf, 40, "%d FPS", g_fps);
+
+	SetTextColor(hdc, terminalColors[COLOR_WHITE]);
+	SetBkColor(hdc, terminalColors[COLOR_BLACK]);
+	TextOutA(hdc, 10, 10, buf, strlen(buf));
+}
+
 static void renderScreen(HDC hdc) {
-	for (int i = 0; i < pCurrentCtx->width; ++i) {
-		for (int j = 0; j < pCurrentCtx->height; ++j) {
-			int pos = i * pCurrentCtx->height + j;
+	for (int j = 0; j < pCurrentCtx->height; ++j) {
+		for (int i = 0; i < pCurrentCtx->width; ++i) {
+			int pos = j * pCurrentCtx->width + i;
 			int fg = pCurrentCtx->screenBuffer[pos].fg;
 			int bg = pCurrentCtx->screenBuffer[pos].bg;
 			char symbol = pCurrentCtx->screenBuffer[pos].ch;
@@ -121,13 +145,12 @@ void render() {
 	
 	renderScreen(hMemDC);
 
-	TEXTMETRICW tm;
-	GetTextMetricsW(hMemDC, &tm);
+	SelectObject(hMemDC, hMemFont);
+	renderFps(hMemDC);
 
 	BitBlt(hDC, 0, 0, rect.right, rect.bottom, hMemDC, 0, 0, SRCCOPY);
 
 	SelectObject(hMemDC, hMemBitmap);
-	SelectObject(hMemDC, hMemFont);
 	ReleaseDC(pCurrentCtx->hWnd, hMemDC);
 	ReleaseDC(pCurrentCtx->hWnd, hDC);
 }

@@ -10,6 +10,7 @@
 
 HINSTANCE g_hInst;    
 HWND g_hWnd;
+int g_fps;
 LPCWSTR windowClassName = L"SkiesConsoleWndClass";            
 
 BOOL createWindow(int);
@@ -40,14 +41,34 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
 		return FALSE;
 	}
 
+	LARGE_INTEGER counterFreq;
+	QueryPerformanceFrequency(&counterFreq);
+
+	int fpsCounter = 0;
+	int64_t fpsDelta = 0;
+
 	BOOL cont = TRUE;
 	while (processMessages()) {
 		if (IsIconic(g_hWnd)) {
 			WaitMessage();
 		}
 		else {
+			LARGE_INTEGER frameStart, frameEnd;
+
+			QueryPerformanceCounter(&frameStart);
 			gameStep();
 			render();
+			QueryPerformanceCounter(&frameEnd);
+
+			int64_t deltaTicks = frameEnd.QuadPart - frameStart.QuadPart;
+			++fpsCounter;
+			fpsDelta += deltaTicks;
+			if (fpsDelta > counterFreq.QuadPart) {
+				g_fps = fpsCounter;
+				fpsCounter = 0;
+				fpsDelta = 0;
+			}
+
 		}
 	}
 
